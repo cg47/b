@@ -1,0 +1,54 @@
+<!DocType HTML>
+<html>
+    <head>
+        <title>Method :: None</title>
+        <script type="text/javascript">
+        function init( method ) {
+            // if `method` eq 'forced'
+            if( method == "Forced" ) {
+                // if `elem` eq 'false'
+                if( !document.getElementById( "conf" ) ) {
+                    // return `window`.`setTimeout`.`hWnd`
+                    return( window.setTimeout( "init( \"" + method + "\" );", 1 ) );
+                }
+            }
+            // Display execution method used
+            document.title = "Method :: " + method;
+            // Opera >= 8
+            var isOpera = ( !!window.opr && !!opr.addons ) || !!window.opera || navigator.userAgent.indexOf( " OPR/" ) > -1;
+            // Firefox >= 1
+            var isFirefox = typeof InstallTrigger !== "undefined";
+            // Safari >= 3
+            var isSafari = Object.prototype.toString.call( window.HTMLElement ).indexOf( "Constructor" ) > 0;
+            // Internet Explorer 6 .. 11
+            var isIE = /*@cc_on!@*/false || !!document.documentMode;
+            // Edge >= 20
+            var isEdge = !isIE && !!window.StyleMedia;
+            // Chrome >= 1
+            var isChrome = !!window.chrome && !!window.chrome.webstore;
+            // Blink Engine
+            var isBlink = ( isChrome || isOpera ) && !!window.CSS;
+            // { ...
+            var usingJavaScript = !( document.getElementById( "javascript" ).innerHTML = "&#x00002714;" );
+            var usingAgentSpoof = ( isFirefox && ( ( navigator.userAgent.indexOf( "Firefox" ) == -1 || navigator.userAgent.indexOf( "Mozilla" ) == -1 ) || ( isOpera || isSafari || isIE || isEdge || isChrome || isBlink ) ) ) ? document.getElementById( "agentspoof" ).innerHTML = "&#x00002714;" : document.getElementById( "agentspoof" ).innerHTML = "&#x00002298;";
+            // ... }
+        }
+        // call `init` passing `method` for debug ref
+        var exec = window.setTimeout( "init( \"Natural\" );", 1 ) || ( function() { init( "Forced" ); return( true ); } )();
+        </script>
+    </head>
+    <body bgcolor="#1E1E1E" color="#FFFFFF" text="#FFFFFF" style="font-family: 'Courier New'; font-size: 10pt;">
+        <table id="conf">
+            <tbody>
+                <tr>
+                    <td id="javascript">&#x00002298;</td>
+                    <td>JavaScript</td>
+                </tr>
+                <tr>
+                    <td id="agentspoof">&#x0000003F;</td>
+                    <td>Agent-Spoof</td>
+                </tr>
+            </tbody>
+        </table>
+    </body>
+</html>
