@@ -1,0 +1,280 @@
+<!DocType HTML>
+<html>
+ <head>
+ </head>
+ <body>
+  <canvas></canvas>
+  <script type="text/javascript">
+  function rgb2hsl( rgb ) {
+   var r = rgb[ 0 ] / 255, g = rgb[ 1 ] / 255, b = rgb[ 2 ] / 255;
+   var min = Math.min( r, g, b );
+   var max = Math.max( r, g, b );
+   var h, s, l = ( max + min ) / 2;
+   if( max == min ) {
+    h = s = 0;
+   }
+   else {
+    var d = max - min;
+    s = l > 0.5 ? d / ( 2 - max - min ) : d / ( max + min );
+    switch( max ) {
+     case r:
+      h = ( g - b ) / d + ( g < b ? 6 : 0 );
+      break;
+     case g:
+      h = ( b - r ) / d + 2;
+      break;
+     case b:
+      h = ( r - g ) / d + 4;
+      break;
+     default: break;
+    }
+    h /= 6;
+   }
+   return( [ h, s, l ] );
+  }
+  var color_hex = "FFFFFF";
+  var color_rgb = [ 255, 255, 255 ];
+  var color_hsl = [ 160, 0, 240 ];
+  function Rectangle( x, y, width, height ) {
+   this.x = x;
+   this.y = y;
+   this.width = width;
+   this.height = height;
+   this.top = this.y;
+   this.left = this.x;
+   this.bottom = this.top + this.height - 1;
+   this.right = this.left + this.width - 1;
+   this.center = {};
+   this.center.x = this.x + ( this.width / 2 );
+   this.center.y = this.y + ( this.height / 2 );
+  }
+  var isInRectangle = function( coord, rect ) {
+   var x = coord[ 0 ];
+   var y = coord[ 1 ];
+   return( x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom );
+  };
+  function Circle( x, y, radius ) {
+   this.x = x;
+   this.y = y;
+   this.radius = radius;
+   this.width = this.radius * 2;
+   this.height = this.radius * 2;
+   this.top = this.y;
+   this.left = this.x;
+   this.bottom = this.top + this.height - 1;
+   this.right = this.left + this.width - 1;
+   this.center = {};
+   this.center.x = this.x + this.radius;
+   this.center.y = this.y + this.radius;
+  }
+  var isInCircle = function( coord, circ ) {
+   var x = coord[ 0 ] - circ.center.x;
+   var y = coord[ 1 ] - circ.center.y;
+   return( Math.sqrt( ( x * x ) + ( y * y ) ) < circ.radius );
+  };
+  var color_wheel = new Circle( 12, 12, 194 / 2 );
+  var alpha_bar = new Rectangle( 224, 9, 25, 200 );
+  var color_tab = new Rectangle( 368, 265, 95, 65 );
+  var color_tab_1 = new Rectangle( 11,  223, 27, 27 );
+  var color_tab_2 = new Rectangle( 46,  223, 27, 27 );
+  var color_tab_3 = new Rectangle( 81,  223, 27, 27 );
+  var color_tab_4 = new Rectangle( 116, 223, 27, 27 );
+  var color_tab_5 = new Rectangle( 151, 223, 27, 27 );
+  var color_tab_6 = new Rectangle( 186, 223, 27, 27 );
+  var color_tab_7 = new Rectangle( 221, 223, 27, 27 );
+  var output_hex = new Rectangle( 258, 265, 95, 65 );
+  var color_at = [ color_wheel.center.x, color_wheel.center.y ];
+  var alpha_at = [ alpha_bar.x, alpha_bar.y ];
+  var alpha = 1;
+  var canvas = document.getElementsByTagName( "canvas" )[ 0 ];
+  var bmp = canvas.getContext( "2d" );
+  var img = new Image();
+  var wheelImageData;
+  var alphaImageData;
+  var tabImageData;
+  var hexImageData;
+  var rect;
+  var keep_in_wheel = false;
+  var keep_in_alpha = false;
+  var keep_in_tabs = false;
+  var test;
+  var setCursor = function() {
+   bmp.putImageData( wheelImageData, 0, 0 );
+   bmp.putImageData( alphaImageData, alpha_bar.x, alpha_bar.y );
+   bmp.putImageData( tabImageData, color_tab_1.x, color_tab_1.y );
+   fixAlpha( alpha_at );
+   bmp.beginPath();
+   bmp.arc( color_at[ 0 ], color_at[ 1 ], 3, 0, 2 * Math.PI );
+   var with_dark = "silver";
+   var with_light = "#323232";
+   var style = alpha <= 0.53 ? with_dark : with_light;
+   if( rect ) {
+    style = with_dark;
+    var r, g, b = color_rgb;
+    if( r > 135 && g > 135 && b > 135 ) {
+     style = with_light;
+    }
+   }
+   bmp.strokeStyle = style;
+   bmp.stroke();
+   bmp.beginPath();
+   bmp.moveTo( alpha_bar.left, alpha_at[ 1 ] );
+   bmp.lineTo( alpha_bar.right, alpha_at[ 1 ] );
+   bmp.strokeStyle = alpha <= 0.4 ? with_dark : with_light;
+   bmp.stroke();
+  };
+  var isInColorWheel = function( coord ) {
+   return( isInCircle( coord, color_wheel ) );
+  };
+  var getColor = function( coord ) {
+   var x = coord[ 0 ];
+   var y = coord[ 1 ];
+   var array = bmp.getImageData( x, y, 1, 1 ).data;
+   var hex = ( "000000" + ( ( array[ 0 ] << 16 ) | ( array[ 1 ] << 8 ) | array[ 2 ] ).toString( 16 ) ).slice( -6 );
+   return( hex.toUpperCase() );
+  };
+  var isInAlphaBar = function( coord ) {
+   return( isInRectangle( coord, alpha_bar ) );
+  };
+  var fixAlpha = function( coord ) {
+   var hex = getColor( coord ).substr( 0, 2 );
+   test = hex;
+   var black_level = ( 255 - parseInt( hex, 16 ) ) / 255;
+   alpha = 1 - black_level;
+   if( alpha > 0.99 ) {
+    alpha = 1;
+    black_level = 0;
+   }
+   else if( alpha < 0.01 ) {
+    alpha = 0;
+    black_level = 1;
+   }
+   fixColorWheelAlpha( black_level );
+  };
+  var fixColorWheelAlpha = function( black_level ) {
+   bmp.putImageData( wheelImageData, 0, 0 );
+   bmp.beginPath();
+   bmp.arc( color_wheel.center.x, color_wheel.center.y, color_wheel.radius, 0, 2 * Math.PI );
+   bmp.fillStyle = "rgba( 0, 0, 0, " + black_level + " )";
+   bmp.fill();
+  };
+  var setColor = function( e ) {
+   e = e || window.event;
+   var x = 0;
+   var y = 0;
+   if( e.offsetX ) {
+    x = e.offsetX;
+    y = e.offsetY;
+   }
+   else if( e.layerX ) {
+    x = e.layerX;
+    y = e.layerY;
+   }
+   var coord = [ x, y ];
+   for(;;) {
+    if( isInColorWheel( coord ) && !keep_in_alpha && !keep_in_tabs ) {
+     keep_in_wheel = true;
+     rect = null;
+     color_at = coord;
+    }
+    else if( isInAlphaBar( coord ) && !keep_in_wheel && !keep_in_tabs ) {
+     keep_in_alpha = true;
+     alpha_at = coord;
+    }
+    else {
+     if( keep_in_wheel || keep_in_alpha ) {
+      break;
+     }
+     else if( isInRectangle( coord, color_tab_1 ) ) {
+      rect = color_tab_1;
+     }
+     else if( isInRectangle( coord, color_tab_2 ) ) {
+      rect = color_tab_2;
+     }
+     else if( isInRectangle( coord, color_tab_3 ) ) {
+      rect = color_tab_3;
+     }
+     else if( isInRectangle( coord, color_tab_4 ) ) {
+      rect = color_tab_4;
+     }
+     else if( isInRectangle( coord, color_tab_5 ) ) {
+      rect = color_tab_5;
+     }
+     else if( isInRectangle( coord, color_tab_6 ) ) {
+      rect = color_tab_6;
+     }
+     else if( isInRectangle( coord, color_tab_7 ) ) {
+      rect = color_tab_7;
+     }
+     else {
+      break;
+     }
+     keep_in_tabs = true;
+     color_at = [ rect.center.x, rect.center.y ];
+    }
+    break;
+   }
+   setCursor();
+   color_hex = getColor( color_at );
+   color_rgb = [ parseInt( color_hex.substr( 0, 2 ), 16 ), parseInt( color_hex.substr( 2, 2 ), 16 ), parseInt( color_hex.substr( 4, 2 ), 16 ) ];
+   color_hsl = rgb2hsl( color_rgb );
+   var hex = "#" + color_hex;
+   bmp.fillStyle = hex;
+   bmp.fillRect( color_tab.x, color_tab.y, color_tab.width, color_tab.height );
+   bmp.putImageData( hexImageData, output_hex.x, output_hex.y );
+   var size = ( function( font, size, text ) {
+    var elem = document.createElement( "div" );
+    var rect = canvas.getClientRects()[ 0 ];
+    rect = { x : rect.x + output_hex.x, y : rect.y + output_hex.y };
+    elem.style = "font-family: " + font + "; font-size: " + size + "; width: auto; height: auto; position: absolute; opacity: 0; left: " + rect.x + "px; top: " + rect.y + "px; cursor: default; -o-cursor: default; -moz-cursor: default; -webkit-cursor: default;";
+    elem.innerHTML = text;
+    document.body.appendChild( elem );
+    var size = { width : elem.clientWidth, height : elem.clientHeight };
+    document.body.removeChild( elem );
+    return( size );
+   } )( "Courier New", "10pt", hex );
+   bmp.font = "10pt Courier New";
+   bmp.fillStyle = "silver";
+   bmp.fillText( hex, output_hex.center.x - ( size.width / 2 ), output_hex.center.y );
+   if( e.cg47 ) {
+    keep_in_wheel = false;
+    keep_in_alpha = false;
+    keep_in_tabs = false;
+   }
+  };
+  canvas.onmousedown = function( e ) {
+   if( e.which == 1 ) {
+    setColor( e );
+    canvas.onmousemove = setColor;
+    var clean = function() {
+     canvas.onmousemove = null;
+     canvas.onmouseout = null
+     canvas.onmouseup = null;
+     keep_in_wheel = false;
+     keep_in_alpha = false;
+     keep_in_tabs = false;
+    };
+    canvas.onmouseout = clean;
+    canvas.onmouseup = clean;
+    e.returnValue = false;
+    if( e.preventDefault ) {
+     e.preventDefault();
+    }
+    return( false );
+   }
+  };
+  img.crossOrigin = "anonymous";
+  img.onload = function() {
+   canvas.width = img.width;
+   canvas.height = img.height;
+   bmp.drawImage( img, 0, 0 );
+   wheelImageData = bmp.getImageData( 0, 0, color_wheel.right + 12, color_wheel.bottom + 12 );
+   tabImageData = bmp.getImageData( color_tab_1.left, color_tab_1.top, ( color_tab_7.right - color_tab_1.left ) + 1, color_tab_4.height );
+   alphaImageData = bmp.getImageData( alpha_bar.x, alpha_bar.y, alpha_bar.width, alpha_bar.height );
+   hexImageData = bmp.getImageData( output_hex.x, output_hex.y, output_hex.width, output_hex.height );
+   setColor( { offsetX : color_at[ 0 ], offsetY : color_at[ 1 ], cg47 : true } );
+  };
+  img.src = "https://i.imgur.com/qnO0c75.png";
+  </script>
+ </body>
+</html>
