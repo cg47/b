@@ -5,6 +5,36 @@
  <body>
   <canvas></canvas>
   <script type="text/javascript">
+  function hsv2rgb( hue, saturation, value ) {
+   var chroma = value * saturation;
+   hue /= 60;
+   var x = chroma * ( 1 - Math.abs( ( hue % 2 ) - 1 ) );
+   var r, g, b;
+   switch( true ) {
+    case hue >= 0 && hue <= 1:
+     ( [ r, g, b ] = [ chroma, x, 0 ] );
+     break;
+    case hue >= 1 && hue <= 2:
+     ( [ r, g, b ] = [ x, chroma, 0 ] );
+     break;
+    case hue >= 2 && hue <= 3:
+     ( [ r, g, b ] = [ 0, chroma, x ] );
+     break;
+    case hue >= 3 && hue <= 4:
+     ( [ r, g, b ] = [ 0, x, chroma ] );
+     break;
+    case hue >= 4 && hue <= 5:
+     ( [ r, g, b ] = [ x, 0, chroma ] );
+     break;
+    case hue >= 5 && hue <= 6:
+     ( [ r, g, b ] = [ chroma, 0, x ] );
+     break;
+    default: break;
+   }
+   var m = value - chroma;
+   ( [ r, g, b ] = [ r + m, g + m, b + m ] );
+   return( [ r * 255, g * 255, b * 255 ] );
+  }
   function rgb2hsl( rgb ) {
    var r = rgb[ 0 ] / 255, g = rgb[ 1 ] / 255, b = rgb[ 2 ] / 255;
    var min = Math.min( r, g, b );
@@ -268,6 +298,41 @@
    canvas.width = img.width;
    canvas.height = img.height;
    bmp.drawImage( img, 0, 0 );
+   // test {
+   var radius = color_wheel.radius;
+   var image = bmp.getImageData( color_wheel.x, color_wheel.y, color_wheel.width, color_wheel.height );
+   var data = image.data;
+   for( var pos_x = -radius; pos_x < radius; pos_x++ ) {
+    for( var pos_y = -radius; pos_y < radius; pos_y++ ) {
+     var [ distance, phi ] = ( function( x, y ) {
+      var dist = Math.sqrt( ( x * x ) + ( y * y ) );
+      var phi = Math.atan2( y, x );
+      return( [ dist, phi ] );
+     } )( pos_x, pos_y );
+     if( distance > radius ) {
+      continue;
+     }
+     var degree = ( function( radius ) {
+      return( ( ( radius + Math.PI ) / ( Math.PI * 2 ) ) * 360 );
+     } )( phi );
+     var rowLength = radius * 2;
+     var x = pos_x + radius;
+     var y = pos_y + radius;
+     var pixelWidth = 4;
+     var i = ( x + ( y * rowLength ) ) * pixelWidth;
+     var hue = degree;
+     var saturation = 1.0;
+     var value = 1.0;
+     var [ red, green, blue ] = hsv2rgb( hue, saturation, value );
+     var alpha = 255;
+     data[ i + 0 ] = red;
+     data[ i + 1 ] = green;
+     data[ i + 2 ] = blue;
+     data[ i + 3 ] = alpha;
+    }
+   }
+   bmp.putImageData( image, color_wheel.x, color_wheel.y );
+   // }
    wheelImageData = bmp.getImageData( 0, 0, color_wheel.right + 12, color_wheel.bottom + 12 );
    tabImageData = bmp.getImageData( color_tab_1.left, color_tab_1.top, ( color_tab_7.right - color_tab_1.left ) + 1, color_tab_4.height );
    alphaImageData = bmp.getImageData( alpha_bar.x, alpha_bar.y, alpha_bar.width, alpha_bar.height );
